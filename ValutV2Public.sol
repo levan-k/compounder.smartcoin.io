@@ -134,9 +134,7 @@ contract VaultV2Public {
 
     function reinvest() public {
         require(!paused);
-        if (totalPoints > 0) {
-            masterChef.deposit(pid, 0);
-        }
+        require(totalPoints > 0);
 
         uint256 balance = Token(token).balanceOf(address(this));
         if (Token(token).allowance(address(this), joeRouter) < balance) {
