@@ -16,7 +16,7 @@ const addresses = [
   '0x6D923f688C7FF287dc3A5943CAeefc994F97b290', // Token
   '0x1495b7e8d7E9700Bd0726F1705E864265724f6e2', // MasterChef
   '0x7B7617c7B2236D7871741783caE8BCc222C2e05D', // Joe LP Token (JLP)
-  '0xD4A9f2A622c55EEF8b019b7af05a0E653FBdB539', // Vault
+  '0xEddFCa8b2e37d7ab8d36b386B2Fb0b030222291B', // Vault
   '0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664', // USDC
   '0xA389f9430876455C36478DeEa9769B7Ca4E3DDB1', // USDC - AVAX
 ]
@@ -313,7 +313,7 @@ function sendTx(to, data, callback) {
       sentTx.on('receipt', (receipt) => {
         loading = false
         balances.rewards = {
-          pending,
+          pending: balances.rewards.pending,
           speed: 0,
           count: 0,
         }

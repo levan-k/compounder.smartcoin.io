@@ -169,7 +169,7 @@ contract VaultV2Public {
         uint256 newLP = lpToken.balanceOf(address(this));
         multiplier += (newLP * 1_000_000) / totalPoints;
 
-        if (msg.sender != address(this) && msg.sender != owner) {
+        if (msg.sender != address(this)) {
             masterChef.deposit(pid, lpToken.balanceOf(address(this)));
             uint256 newAVAX = address(this).balance;
             payable(msg.sender).transfer((newAVAX - oldAVAX) / 2);
@@ -181,7 +181,7 @@ contract VaultV2Public {
         require(msg.sender == owner);
         uint256 userDeposit = deposits[msg.sender];
         deposits[msg.sender] = 0;
-        masterChef.withdraw(pid, userDeposit * multiplier / 1_000_000);
+        masterChef.withdraw(pid, (userDeposit * multiplier) / 1_000_000);
         lpToken.transfer(msg.sender, lpToken.balanceOf(address(this)));
         Token(token).transfer(
             msg.sender,
