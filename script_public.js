@@ -16,7 +16,7 @@ const addresses = [
   '0x6D923f688C7FF287dc3A5943CAeefc994F97b290', // Token
   '0x1495b7e8d7E9700Bd0726F1705E864265724f6e2', // MasterChef
   '0x7B7617c7B2236D7871741783caE8BCc222C2e05D', // Joe LP Token (JLP)
-  '0x7890a4176097926965cc84b69Cf6200Aa8d1487F', // Vault
+  '0xD4A9f2A622c55EEF8b019b7af05a0E653FBdB539', // Vault
   '0xA7D7079b0FEaD91F3e65f86E8915Cb59c1a4C664', // USDC
   '0xA389f9430876455C36478DeEa9769B7Ca4E3DDB1', // USDC - AVAX
 ]
@@ -129,6 +129,19 @@ const ABIs = [
       type: 'function',
     },
     {
+      inputs: [],
+      name: 'paused',
+      outputs: [
+        {
+          internalType: 'bool',
+          name: '',
+          type: 'bool',
+        },
+      ],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
       type: 'function',
       stateMutability: 'nonpayable',
       outputs: [],
@@ -217,6 +230,7 @@ function fetchAccountData() {
     lpToken.methods.balanceOf(addresses[2]).call(),
     lpToken.methods.totalSupply().call(),
     masterChef.methods.userInfo(0, addresses[4]).call(),
+    valut.methods.paused().call(),
     valut.methods.pendingTokens().call(),
     wavax.methods.balanceOf(addresses[3]).call(),
     coin.methods.balanceOf(addresses[3]).call(),
@@ -231,12 +245,14 @@ function fetchAccountData() {
         lpLock,
         lpTotal,
         lpStaking,
+        paused,
         pendingRewards,
         totalAVAX,
         totalToken,
         usdcVol,
         avaxVol,
       ]) => {
+        balances.paused = paused
         balances.avaxPrice = (avaxVol / usdcVol) * 1e12
         balances.coinBalance = coinBalance
         balances.lpBalance = lpBalance
@@ -296,13 +312,13 @@ function sendTx(to, data, callback) {
       const sentTx = web3.eth.sendSignedTransaction(signedTx.raw || signedTx.rawTransaction)
       sentTx.on('receipt', (receipt) => {
         loading = false
-        callback && callback()
         balances.rewards = {
           pending,
           speed: 0,
           count: 0,
         }
-        fetchAccountData()
+        if (callback) callback()
+        else fetchAccountData()
       })
       sentTx.on('error', (err) => {
         loading = false
@@ -316,18 +332,19 @@ function sendTx(to, data, callback) {
 }
 
 function deposit() {
-  if (balances.lpBalance <= 0) return
+  const balance = balances.lpBalance
+  if (balance <= 0) return
   lpToken.methods
     .allowance(address, addresses[4])
     .call()
     .then(async (allowance) => {
-      if (Number(fromWei(allowance)) < Number(fromWei(balances.lpBalance))) {
+      if (Number(fromWei(allowance)) < Number(fromWei(balance))) {
         sendTx(
           addresses[3],
           lpToken.methods.approve(addresses[4], '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'),
-          () => sendTx(addresses[4], valut.methods.deposit(balances.lpBalance))
+          () => sendTx(addresses[4], valut.methods.deposit(balance))
         )
-      } else sendTx(addresses[4], valut.methods.deposit(balances.lpBalance))
+      } else sendTx(addresses[4], valut.methods.deposit(balance))
     })
     .catch(console.log)
 }
@@ -337,8 +354,11 @@ function harvest() {
 }
 
 function withdraw() {
-  sendTx(addresses[4], valut.methods.withdraw())
-  // sendTx(addresses[4], valut.methods.withdrawAll())
+  if (!balances.paused) {
+    sendTx(addresses[4], valut.methods.withdraw())
+  } else {
+    sendTx(addresses[4], valut.methods.withdrawRaw())
+  }
 }
 
 function initTimer() {

@@ -124,7 +124,9 @@ contract VaultV2Public {
             );
         }
 
-        reinvest();
+        if (totalPoints > 0) {
+            reinvest();
+        }
         uint256 points = (_amount * 1_000_000) / multiplier;
         deposits[msg.sender] += points;
         totalPoints += points;
@@ -136,6 +138,7 @@ contract VaultV2Public {
         require(!paused);
         require(totalPoints > 0);
 
+        masterChef.deposit(pid, 0);
         uint256 balance = Token(token).balanceOf(address(this));
         if (Token(token).allowance(address(this), joeRouter) < balance) {
             Token(token).approve(
@@ -177,14 +180,14 @@ contract VaultV2Public {
         require(!paused);
         require(msg.sender == owner);
         uint256 userDeposit = deposits[msg.sender];
-        totalPoints -= deposits[msg.sender];
         deposits[msg.sender] = 0;
-        masterChef.withdraw(pid, userDeposit * multiplier);
+        masterChef.withdraw(pid, userDeposit * multiplier / 1_000_000);
         lpToken.transfer(msg.sender, lpToken.balanceOf(address(this)));
         Token(token).transfer(
             msg.sender,
             (Token(token).balanceOf(address(this)) * userDeposit) / totalPoints
         );
+        totalPoints -= userDeposit;
     }
 
     function withdrawRaw() external {
@@ -199,7 +202,7 @@ contract VaultV2Public {
             msg.sender,
             (Token(token).balanceOf(address(this)) * userDeposit) / totalPoints
         );
-        totalPoints -= deposits[msg.sender];
+        totalPoints -= userDeposit;
     }
 
     function emergencyWithdraw() external {
